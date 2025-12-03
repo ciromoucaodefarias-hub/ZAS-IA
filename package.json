@@ -1,0 +1,12 @@
+{
+  "name": "zas-ia-serverless",
+  "version": "1.0.0",
+  "description": "ZAS IA serverless + client",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "node-fetch": "^2.6.9"
+  }
+}

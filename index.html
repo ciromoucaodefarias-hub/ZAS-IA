@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ZAS IA – Criador de Sites (API)</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 0; margin: 0; }
+  header { background: #000; color: #FFD700; padding: 20px; text-align: center; font-size: 28px; font-weight: bold; }
+  .container { max-width: 900px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px #0003; }
+  textarea, input, select { width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 12px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; }
+  button { background: #000; color: #FFD700; border: none; padding: 12px 22px; font-size: 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+  #output { white-space: pre-wrap; background: #111; color: #0f0; padding: 20px; border-radius: 10px; display: none; margin-top: 20px; font-family: monospace; max-height: 400px; overflow:auto; }
+  .row { display:flex; gap:12px; }
+  @media (max-width:640px) { .row { flex-direction: column; } }
+  .muted { color:#666; font-size:0.9rem; margin-bottom:8px; }
+  .preview { border:1px solid #ddd; padding:10px; border-radius:6px; margin-top:12px; }
+</style>
+</head>
+<body>
+<header>ZAS IA – Criador Inteligente de Sites (API)</header>
+
+<div class="container">
+  <h2>Informe os dados para gerar seu site:</h2>
+
+  <input id="nome" placeholder="Nome do Projeto">
+  <textarea id="descricao" placeholder="Descrição do projeto"></textarea>
+  <div class="row">
+    <input id="publico" placeholder="Público alvo">
+    <select id="tipo">
+      <option value="site">site</option>
+      <option value="app">app</option>
+      <option value="ambos">ambos</option>
+    </select>
+  </div>
+  <textarea id="paginas" placeholder="Páginas: Home, Sobre, Produtos, Contato..."></textarea>
+  <input id="cores" placeholder="Cores principais (ex: #000000, #FFD700)">
+  <textarea id="funcoes" placeholder="Funcionalidades: WhatsApp, carrinho, agendamento..."></textarea>
+
+  <div class="muted">Nota: por segurança, a chave da API não é usada direto no navegador. Configure o servidor backend com sua chave e, em produção, use autenticação.</div>
+
+  <div class="row">
+    <button id="btnGenerate">Gerar com ZAS IA</button>
+    <button id="btnDownload" style="display:none;">Baixar HTML</button>
+  </div>
+
+  <div id="output" aria-live="polite"></div>
+
+  <div id="previewContainer" class="preview" style="display:none;">
+    <strong>Visualização:</strong>
+    <iframe id="previewFrame" style="width:100%;height:450px;border:none;margin-top:8px;"></iframe>
+  </div>
+</div>
+
+<script>
+async function gerarSite() {
+  const btn = document.getElementById('btnGenerate');
+  const outputBox = document.getElementById('output');
+  const previewContainer = document.getElementById('previewContainer');
+  btn.disabled = true;
+  btn.textContent = '⏳ Gerando...';
+  outputBox.style.display = 'block';
+  outputBox.textContent = 'Gerando site — aguarde...';
+  previewContainer.style.display = 'none';
+
+  const dados = {
+    nome: document.getElementById('nome').value.trim(),
+    descricao: document.getElementById('descricao').value.trim(),
+    publico: document.getElementById('publico').value.trim(),
+    tipo: document.getElementById('tipo').value,
+    paginas: document.getElementById('paginas').value.trim(),
+    cores: document.getElementById('cores').value.trim(),
+    funcoes: document.getElementById('funcoes').value.trim()
+  };
+
+  if (!dados.nome || !dados.descricao) {
+    outputBox.textContent = 'Por favor preencha pelo menos Nome e Descrição.';
+    btn.disabled = false;
+    btn.textContent = 'Gerar com ZAS IA';
+    return;
+  }
+
+  try {
+    const resp = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-zas-ia-key': '' },
+      body: JSON.stringify({ dados })
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      outputBox.textContent = 'Erro do servidor: ' + resp.status + ' — ' + text;
+      btn.disabled = false;
+      btn.textContent = 'Gerar com ZAS IA';
+      return;
+    }
+
+    const json = await resp.json();
+    if (!json.html) {
+      outputBox.textContent = 'Resposta inesperada do servidor.';
+      btn.disabled = false;
+      btn.textContent = 'Gerar com ZAS IA';
+      return;
+    }
+
+    outputBox.textContent = json.html;
+    document.getElementById('btnDownload').style.display = 'inline-block';
+
+    const iframe = document.getElementById('previewFrame');
+    iframe.srcdoc = json.html;
+    document.getElementById('previewContainer').style.display = 'block';
+
+    const downloadBtn = document.getElementById('btnDownload');
+    downloadBtn.onclick = () => {
+      const blob = new Blob([json.html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = (dados.nome || 'site') + '.html';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    };
+
+  } catch (err) {
+    outputBox.textContent = 'Erro: ' + (err.message || err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Gerar com ZAS IA';
+  }
+}
+
+document.getElementById('btnGenerate').addEventListener('click', gerarSite);
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') gerarSite();
+});
+</script>
+
+</body>
+</html>
